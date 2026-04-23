@@ -1,65 +1,46 @@
-products = [
-    {"id": 1, "name": "Teddy Bear", "category": "gift", "tags": ["soft", "toy", "love"]},
-    {"id": 2, "name": "Chocolate Box", "category": "food", "tags": ["sweet", "gift", "love"]},
-    {"id": 3, "name": "Perfume", "category": "beauty", "tags": ["fragrance", "luxury"]},
-    {"id": 4, "name": "Flower Bouquet", "category": "gift", "tags": ["love", "romantic"]},
-    {"id": 5, "name": "Smart Watch", "category": "electronics", "tags": ["tech", "fitness"]},
-    {"id": 6, "name": "Photo Frame", "category": "gift", "tags": ["memory", "home"]},
-]
-from data import products
+import cv2
 
-# Function to find similar products
-def recommend(product_id):
-    selected_product = None
+# Load the pre-trained face detection model
+face_cascade = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
 
-    # Find selected product
-    for p in products:
-        if p["id"] == product_id:
-            selected_product = p
-            break
+# Start webcam
+cap = cv2.VideoCapture(0)
 
-    if not selected_product:
-        return []
+if not cap.isOpened():
+    print("Error: Could not access camera")
+    exit()
 
-    recommendations = []
+print("Press 'q' to exit")
 
-    for p in products:
-        if p["id"] != product_id:
-            score = 0
+while True:
+    ret, frame = cap.read()
 
-            # Same category
-            if p["category"] == selected_product["category"]:
-                score += 2
+    if not ret:
+        print("Failed to grab frame")
+        break
 
-            # Matching tags
-            common_tags = set(p["tags"]).intersection(set(selected_product["tags"]))
-            score += len(common_tags)
+    # Convert to grayscale
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-            if score > 0:
-                recommendations.append((p, score))
+    # Detect faces
+    faces = face_cascade.detectMultiScale(
+        gray,
+        scaleFactor=1.3,
+        minNeighbors=5,
+        minSize=(30, 30)
+    )
 
-    # Sort by score
-    recommendations.sort(key=lambda x: x[1], reverse=True)
+    # Draw rectangle around faces
+    for (x, y, w, h) in faces:
+        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
 
-    return [item[0] for item in recommendations]
+    # Show output
+    cv2.imshow("Face Detection", frame)
 
+    # Exit condition
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
-# CLI Demo
-def main():
-    print("🛒 Product Recommendation System\n")
-
-    print("Available Products:")
-    for p in products:
-        print(f"{p['id']}. {p['name']}")
-
-    user_choice = int(input("\nEnter product ID: "))
-
-    results = recommend(user_choice)
-
-    print("\n🔍 Recommended Products:")
-    for r in results:
-        print("-", r["name"])
-
-
-if __name__ == "__main__":
-    main()
+# Release resources
+cap.release()
+cv2.destroyAllWindows()
